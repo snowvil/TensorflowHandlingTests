@@ -4,10 +4,17 @@ project(OpsTest LANGUAGES CXX)
 find_package(tensorflow REQUIRED)
 find_package(GTest REQUIRED)
 
-add_executable(main main.cpp)
-target_link_libraries(main PRIVATE tensorflow ${GTEST_BOTH_LIBRARIES})
-target_include_directories(main PRIVATE ${GTEST_INCLUDE_DIRS})
-target_compile_definitions(main PRIVATE COMPILER_MSVC)
+macro(enhanceTarget targetname)
+    target_sources(${targetname} PRIVATE testhelper.h)
+    target_link_libraries(${targetname} PRIVATE tensorflow ${GTEST_BOTH_LIBRARIES})
+    target_include_directories(${targetname} PRIVATE ${GTEST_INCLUDE_DIRS})
+    target_compile_definitions(${targetname} PRIVATE COMPILER_MSVC)
+    add_test(NAME ${targetname} COMMAND ${targetname})
+endmacro()
 
 
-add_test(NAME tester COMMAND main)
+add_executable(Const ConstTest.cpp)
+enhanceTarget(Const)
+
+add_executable(Variable VariableTest.cpp)
+enhanceTarget(Variable)
