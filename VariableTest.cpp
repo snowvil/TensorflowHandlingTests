@@ -26,7 +26,20 @@ TEST(Variable, Variable)
 	EXPECT_EQ(2, *output.at(0).scalar<int>().data());
 }
 
-TEST(Variable, VariableAdd)
+TEST(Variable, VariableFloat)
+{
+	Scope root = Scope::NewRootScope();
+	::std::vector<Tensor> output;
+
+	ops::Variable var = ops::Variable(root, { 1 }, DT_FLOAT);
+	Output varAssign = ops::Assign(root, var, { 1.0F });
+
+	ClientSession session(root);
+	Status st{ session.Run({ varAssign }, &output) };
+	EXPECT_EQ(1.0F, *output.at(0).scalar<float>().data()) << st.error_message();
+}
+
+TEST(Variable, VariableIntAdd)
 {
 	TensorflowWrapperInit;
 	ops::Variable var = ops::Variable(root, { 1 }, DT_INT32);
@@ -42,3 +55,18 @@ TEST(Variable, VariableAdd)
 	EXPECT_EQ(3, *output.at(0).scalar<int>().data());
 }
 
+TEST(Variable, VariableFloatAdd)
+{
+	TensorflowWrapperInit;
+	ops::Variable var = ops::Variable(root, { 1 }, DT_FLOAT);
+	Output varAssign = ops::Assign(root, var, { 1.2F });
+
+	ClientSession session(root);
+	Status st{ session.Run({ varAssign }, &output) };
+	EXPECT_EQ(1.2F, *output.at(0).scalar<float>().data());
+	output.clear();
+
+	Output add = ops::Add(root, var, ops::Cast(root,input,DT_FLOAT));
+	st = session.Run({ { { input,{ 2 } } } }, { add }, &output);
+	EXPECT_EQ(3.2F, *output.at(0).scalar<float>().data());
+}

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
-project(OpsTest LANGUAGES CXX)
+project(BasicTest LANGUAGES CXX)
 
 find_package(tensorflow REQUIRED)
 find_package(GTest REQUIRED)

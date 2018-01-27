@@ -1,4 +1,5 @@
 #include "gtest/gtest.h"
+#include "testhelper.h"
 
 #include <vector>
 #include "tensorflow/cc/framework/scope.h"
@@ -7,11 +8,6 @@
 #include "tensorflow/cc/client/client_session.h"
 
 using namespace ::tensorflow;
-
-#define TensorflowWrapperInit \
-	Scope root = Scope::NewRootScope(); \
-	ops::Placeholder input = ops::Placeholder(root.WithOpName("input"), DT_INT32); \
-	::std::vector<Tensor> output;
 
 TEST(Const, Scalar)
 {
@@ -35,6 +31,32 @@ TEST(Const, Vector)
 	EXPECT_EQ(2, *val);
 	EXPECT_EQ(3, *(++val));
 }
+
+#include "tensorflow/cc/ops/const_op.h"
+TEST(Const, FloatConstruct)
+{
+	Scope root = Scope::NewRootScope();
+	::std::vector<Tensor> output;
+
+	Output Const = ops::Const(root, { 1.0F });
+
+	ClientSession session(root);
+	Status st({ session.Run({},{ Const }, &output) });
+	EXPECT_EQ(1.0F, *(output.at(0).vec<float>().data())) << st.error_message();
+}
+
+TEST(Const, Float)
+{
+	Scope root = Scope::NewRootScope();
+	ops::Placeholder input = ops::Placeholder(root.WithOpName("input"), DT_FLOAT);
+	::std::vector<Tensor> output;
+
+	ClientSession session(root);
+	Output Add = ops::Add(root.WithOpName("add"), input, input);
+	Status st({ session.Run({ { input,{ 1.2F } } },{ Add }, &output) });
+	EXPECT_EQ(2.4F, *(output.at(0).vec<float>().data())) << st.error_message();
+}
+
 //
 //#include "tensorflow/cc/ops/training_ops.h" // For ApplyGradientDescent
 //#include "tensorflow/cc/ops/const_op.h" // For Const
