@@ -73,9 +73,11 @@ TEST(Variable, VariableFloatAdd)
 
 TEST(Variable, ManipulateVariable)
 {
-	int x = 1;
+	// Adapting the multiplication value for input 'x' to output 'y'´.
+	// This is some kind of 'Hello World in adapting'
+	int x = 2;
 	int y = 5;
-	float weight = 0.0;
+	float weight = 1.0;
 
 	TensorflowWrapperInit;
 	ops::Placeholder y_expected = ops::Placeholder(root.WithOpName("y_expected"), DT_INT32);
@@ -88,12 +90,13 @@ TEST(Variable, ManipulateVariable)
 	EXPECT_EQ(weight, *output.at(0).scalar<float>().data());
 	output.clear();
 
-	// adding the values. This is the basic model, which
-	Output add = ops::Add(root, var, ops::Cast(root, input, DT_FLOAT));
+	// adding the values. This is the basic model, which will be later used
+	// to get the calculated values
+	Output MulModel = ops::Mul(root, var, ops::Cast(root, input, DT_FLOAT));
 
 	// calculating the difference between calculated value (output from 'add') and
 	// the expected value 'y_expected'
-	Output diff = ops::Sub(root, ops::Cast(root, y_expected, DT_FLOAT), add);
+	Output diff = ops::Sub(root, ops::Cast(root, y_expected, DT_FLOAT), MulModel);
 
 	/*st = session.Run({ { { input,{ x } },{ y_expected,{y} } } }, { diff }, &output);
 	float oDiff = *(output.at(0).scalar<float>().data());
@@ -106,19 +109,21 @@ TEST(Variable, ManipulateVariable)
 	Output updateVariable = ops::Add(root, var, mul);
 	Output varAssignNew = ops::Assign(root, var, updateVariable);
 
+	::std::cout << "\tWeight\tOutput\n";
 	// calculate the value 1000 times
 	for (size_t i = 0; i < 1000; i++)
 	{
-		st = session.Run({ { { input,{ x } },{ y_expected,{ y } } } }, { varAssignNew }, &output);
+		st = session.Run({ { { input,{ x } },{ y_expected,{ y } } } }, { varAssignNew,MulModel }, &output);
 		// just to see the change of the variable
 		if ((i < 20))
 		{
-			::std::cout<< i << "\t:" << *(output.at(0).scalar<float>().data()) << "\n";
+			::std::cout<< i << "\t:" << *(output.at(0).scalar<float>().data()) << "\t" 
+				<< *(output.at(1).scalar<float>().data()) << "\n";
 		}
 	}
 
 	// see if the real model gets the desired value
-	st = session.Run({ { { input,{ x } } } }, { add }, &output);
+	st = session.Run({ { { input,{ x } } } }, { MulModel }, &output);
 	float oModelOutput = *(output.at(0).scalar<float>().data());
-	EXPECT_FLOAT_EQ(2.0, oModelOutput);
+	EXPECT_FLOAT_EQ(y, oModelOutput);
 }

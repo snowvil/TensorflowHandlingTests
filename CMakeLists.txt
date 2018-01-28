@@ -18,3 +18,6 @@ enhanceTarget(Const)
 
 add_executable(Variable VariableTest.cpp)
 enhanceTarget(Variable)
+
+add_executable(NNOps NNOpsTest.cpp)
+enhanceTarget(NNOps)
