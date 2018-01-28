@@ -90,7 +90,7 @@ TEST(Variable, ManipulateVariable)
 	EXPECT_EQ(weight, *output.at(0).scalar<float>().data());
 	output.clear();
 
-	// adding the values. This is the basic model, which will be later used
+	// multiplying the values. This is the basic model, which will be later used
 	// to get the calculated values
 	Output MulModel = ops::Mul(root, var, ops::Cast(root, input, DT_FLOAT));
 
