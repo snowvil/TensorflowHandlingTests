@@ -45,6 +45,31 @@ TEST(Const, FloatConstruct)
 	EXPECT_EQ(1.0F, *(output.at(0).vec<float>().data())) << st.error_message();
 }
 
+TEST(Const, MatrixConstruct)
+{
+	Scope root = Scope::NewRootScope();
+	::std::vector<Tensor> output;
+
+	Output Const = ops::Const(root, { {1,2},{3,4} });
+
+	ClientSession session(root);
+	Status st({ session.Run({},{ Const }, &output) });
+	
+	// Test the matrix and access some of the values
+	TensorShape tShape = output.at(0).shape();
+	EXPECT_TRUE(tShape.IsSameSize({ 2,2 }));
+
+	EXPECT_EQ(output.at(0).NumElements(), 4);
+	EXPECT_EQ(output.at(0).dtype(), DT_INT32);
+
+	// this returns an EIGEN-matrix.
+	auto test = output.at(0).matrix<int>();
+	EXPECT_EQ(test(0, 0), 1);
+	EXPECT_EQ(test(0, 1), 2);
+	EXPECT_EQ(test(1, 0), 3);
+	EXPECT_EQ(test(1, 1), 4);
+}
+
 TEST(Const, Float)
 {
 	Scope root = Scope::NewRootScope();
@@ -56,40 +81,3 @@ TEST(Const, Float)
 	Status st({ session.Run({ { input,{ 1.2F } } },{ Add }, &output) });
 	EXPECT_EQ(2.4F, *(output.at(0).vec<float>().data())) << st.error_message();
 }
-
-//
-//#include "tensorflow/cc/ops/training_ops.h" // For ApplyGradientDescent
-//#include "tensorflow/cc/ops/const_op.h" // For Const
-//#include "tensorflow/cc/ops/math_ops.h" // For Cast
-//#include "tensorflow/cc/framework/ops.h"
-//#include "tensorflow/core/lib/core/status.h"
-//
-//TEST(test, Gradient)
-//{
-//	TensorflowWrapperInit;
-//	// constructing variable und assigning have to be next to each other. No further
-//	// calculatings in between
-//	ops::Variable var = ops::Variable(root,{1}, DT_INT32);
-//	Output varAssign = ops::Assign(root, var, { 1 });
-//	// MatMul only works with matrix
-//	Output Mul = ops::Mul(root, input, var);
-//	Output learning_rate = ops::Const(root.WithOpName("learning_rate"), 0.01f, { 1 });
-//	//Output Grad = ops::ApplyGradientDescent(root.WithOpName("GradDescent"), { var }, { learning_rate },{ Mul });
-//	
-//	ClientSession session(root);
-//
-//	Status st{ session.Run({ varAssign }, &output) };
-//	ASSERT_TRUE(st.ok()) << st.error_message();
-//	EXPECT_EQ(1, *output.at(0).scalar<int>().data());
-//	output.clear();
-//
-//	st = session.Run({ { input,{2} } }, { Mul }, &output);
-//	ASSERT_TRUE(st.ok()) << st.error_message();
-//	EXPECT_EQ(2, *output.at(0).scalar<int>().data());
-//	output.clear();
-//
-//	/*st = session.Run({ { input,{ 2 } } }, { Grad }, &output);
-//	ASSERT_TRUE(st.ok()) << st.error_message();
-//	EXPECT_EQ(2, *output.at(0).scalar<int>().data());
-//	output.clear();*/
-//}

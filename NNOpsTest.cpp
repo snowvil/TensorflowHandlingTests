@@ -33,3 +33,67 @@ TEST(Math, AbsVector)
 	EXPECT_EQ(2, *(++val));
 	output.clear();
 }
+
+TEST(NNOps, ReluSingle)
+{
+	TensorflowWrapperInit;
+	Output Relu = ops::Relu(root, input);
+
+	ClientSession session(root);
+	Status st{ session.Run({ { input,{ 0 } } },{ Relu }, &output) };
+	int* val = output.at(0).vec<int>().data();
+	EXPECT_EQ(0, *val);
+	output.clear();
+
+	st = session.Run({ { input,{ 1 } } },{ Relu }, &output);
+	val = output.at(0).vec<int>().data();
+	EXPECT_EQ(1, *val);
+	output.clear();
+
+	st =  session.Run({ { input,{ -1 } } },{ Relu }, &output);
+	val = output.at(0).vec<int>().data();
+	EXPECT_EQ(0, *val);
+	output.clear();
+
+	st = session.Run({ { input,{ 10 } } },{ Relu }, &output);
+	val = output.at(0).vec<int>().data();
+	EXPECT_EQ(10, *val);
+	output.clear();
+}
+
+TEST(NNOps, ReluVector)
+{
+	TensorflowWrapperInit;
+	Output Relu = ops::Relu(root, input);
+
+	ClientSession session(root);
+	Status st{ session.Run({ { input,{ -1,0,1,10 } } },{ Relu }, &output) };
+	int* val = output.at(0).vec<int>().data();
+	EXPECT_EQ(0, *val);
+	EXPECT_EQ(0, *(++val));
+	EXPECT_EQ(1, *(++val));
+	EXPECT_EQ(10, *(++val));
+	output.clear();
+}
+
+TEST(Math, TanhSingle)
+{
+	TensorflowWrapperInit;
+	Output Tanh = ops::Tanh(root, ops::Cast(root,input,DT_FLOAT));
+
+	ClientSession session(root);
+	Status st{ session.Run({ { input,{ 0 } } },{ Tanh }, &output) };
+	float* val = output.at(0).vec<float>().data();
+	EXPECT_EQ(0, *val);
+	output.clear();
+
+	st = session.Run({ { input,{ 100 } } }, { Tanh }, &output);
+	val = output.at(0).vec<float>().data();
+	EXPECT_EQ(1, *val);
+	output.clear();
+
+	st = session.Run({ { input,{ -100 } } }, { Tanh }, &output);
+	val = output.at(0).vec<float>().data();
+	EXPECT_EQ(-1, *val);
+	output.clear();
+}
