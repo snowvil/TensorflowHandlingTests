@@ -97,3 +97,52 @@ TEST(Math, TanhSingle)
 	EXPECT_EQ(-1, *val);
 	output.clear();
 }
+
+TEST(NNOps, L2LossScalar)
+{
+	//L2Loss = sum(t**2)/2
+
+	Scope root = Scope::NewRootScope();
+	::std::vector<Tensor> output;
+
+	PartialTensorShape inputShape({ 1,1 });
+	ops::Placeholder::Attrs attrs;
+	attrs.Shape(inputShape);
+	ops::Placeholder x = ops::Placeholder(root, DT_FLOAT,attrs);
+
+	// L2Loss needs an 2D-Array. Therefore must have the placeholder-value a shape-attribut
+	Output L2Loss = ops::L2Loss(root, x);
+
+	ClientSession session(root);
+
+	// It seems like you can add more values to the input parameter than stated in the placeholder attribute
+	Status status = session.Run({ {x,{1.0F}} }, { L2Loss }, &output);
+	ASSERT_TRUE(status.ok()) << status.error_message();
+	float* val = output.at(0).scalar<float>().data();
+	EXPECT_EQ(0.5, *val);
+}
+
+TEST(NNOps, L2LossVector)
+{
+	//L2Loss = sum(t**2)/2
+
+	Scope root = Scope::NewRootScope();
+	::std::vector<Tensor> output;
+
+	PartialTensorShape inputShape({ 3,1 });
+	ops::Placeholder::Attrs attrs;
+	attrs.Shape(inputShape);
+	ops::Placeholder x = ops::Placeholder(root, DT_FLOAT, attrs);
+
+	// L2Loss needs an 2D-Array. Therefore must have the placeholder-value a shape-attribut
+	Output L2Loss = ops::L2Loss(root, x);
+
+	ClientSession session(root);
+
+	// It seems like you can add more values to the input parameter than stated in the placeholder attribute.
+	// L2Loss also needs double or float values
+	Status status = session.Run({ { x,{ 1.0F,2.0F,3.0F } } }, { L2Loss }, &output);
+	ASSERT_TRUE(status.ok()) << status.error_message();
+	float* val = output.at(0).scalar<float>().data();
+	EXPECT_FLOAT_EQ(7, *val);
+}

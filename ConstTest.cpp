@@ -19,6 +19,16 @@ TEST(Const, Scalar)
 	EXPECT_EQ(1, *(output.at(0).scalar<int>().data()));
 }
 
+TEST(Const, RichByPlaceholder)
+{
+	TensorflowWrapperInit;
+	ClientSession session(root);
+
+	Status st = session.Run({ { input,{ 1 } } }, { input }, &output);
+	ASSERT_TRUE(st.ok()) << st.error_message();
+	EXPECT_EQ(1, *(output.at(0).scalar<int>().data()));
+}
+
 TEST(Const, Vector)
 {
 	TensorflowWrapperInit;
@@ -50,7 +60,7 @@ TEST(Const, MatrixConstruct)
 	Scope root = Scope::NewRootScope();
 	::std::vector<Tensor> output;
 
-	Output Const = ops::Const(root, { {1,2},{3,4} });
+	Output Const = ops::Const(root, { {1,2}, {3,4} });
 
 	ClientSession session(root);
 	Status st({ session.Run({},{ Const }, &output) });
@@ -62,12 +72,20 @@ TEST(Const, MatrixConstruct)
 	EXPECT_EQ(output.at(0).NumElements(), 4);
 	EXPECT_EQ(output.at(0).dtype(), DT_INT32);
 
-	// this returns an EIGEN-matrix.
-	auto test = output.at(0).matrix<int>();
-	EXPECT_EQ(test(0, 0), 1);
-	EXPECT_EQ(test(0, 1), 2);
-	EXPECT_EQ(test(1, 0), 3);
-	EXPECT_EQ(test(1, 1), 4);
+	// this returns an EIGEN-matrix
+	TTypes<int>::Matrix outputMatrix = output.at(0).matrix<int>();
+	EXPECT_EQ(outputMatrix(0, 0), 1);
+	EXPECT_EQ(outputMatrix(0, 1), 2);
+	EXPECT_EQ(outputMatrix(1, 0), 3);
+	EXPECT_EQ(outputMatrix(1, 1), 4);
+
+	EXPECT_EQ(outputMatrix.size(),4);
+	int* data = outputMatrix.data();
+
+	EXPECT_EQ(*data++, 1);
+	EXPECT_EQ(*data++, 2);
+	EXPECT_EQ(*data++, 3);
+	EXPECT_EQ(*data++, 4);
 }
 
 TEST(Const, Float)

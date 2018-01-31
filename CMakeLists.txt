@@ -21,3 +21,7 @@ enhanceTarget(Variable)
 
 add_executable(NNOps NNOpsTest.cpp)
 enhanceTarget(NNOps)
+
+add_executable(Training TrainingTest.cpp)
+enhanceTarget(Training)
+
