@@ -88,7 +88,7 @@ TEST(Const, MatrixConstruct)
 	EXPECT_EQ(*data++, 4);
 }
 
-TEST(Const, ConvertVectorToTensor)
+TEST(Const, PlaceholderWithDifferentShapesByRun)
 {
 	Scope root = Scope::NewRootScope();
 	ops::Placeholder input = ops::Placeholder(root.WithOpName("input"), DT_FLOAT);
@@ -112,16 +112,63 @@ TEST(Const, ConvertVectorToTensor)
 	EXPECT_EQ(2.0F, *data++);
 	EXPECT_EQ(4.0F, *data++);
 	EXPECT_EQ(6.0F, *data++);
+}
 
-	Tensor myTensor(DT_FLOAT, { 1,1 });
+TEST(Const, CreateTensor)
+{
+    Scope root = Scope::NewRootScope();
+	ops::Placeholder input = ops::Placeholder(root.WithOpName("input"), DT_FLOAT);
+	::std::vector<Tensor> output;
+	ClientSession session(root);
+	Output Add = ops::Add(root.WithOpName("add"), input, input);
+
+    Tensor myTensor(DT_FLOAT, { 1,1 });
 	myTensor.scalar<float>()(0) = 3.0F;
-	st = session.Run({ { input,myTensor} }, { Add }, &output);
-	ASSERT_TRUE(st.ok()) << st.error_message();
 
-	data = output.at(0).matrix<float>().data();
+	Status st = session.Run({ { input,myTensor} }, { Add }, &output);
+	ASSERT_TRUE(st.ok()) << st.error_message();
+	float* data = output.at(0).matrix<float>().data();
 	EXPECT_EQ(6.0F, *data);
 }
 
+TEST(Const, CopyVector)
+{
+	TensorflowWrapperInit;
+	ClientSession session(root);
+	Output Add = ops::Add(root.WithOpName("add"), input, input);
+
+	::std::vector<int> vec({ 1,2,3,4 });
+	Tensor myEigenTensor(DT_INT32, TensorShape({ 4 }));
+	::std::copy_n(vec.begin(), vec.size(), myEigenTensor.vec<int>().data());
+	std::cout << myEigenTensor.DebugString();
+	Status st = session.Run({ { input,myEigenTensor } }, { Add }, &output);
+	int* data = output.at(0).vec<int>().data();
+	for (const int& it: vec)
+	{
+		EXPECT_EQ(2 * it, *data);
+		data++;
+	}
+}
+
+TEST(Const, CopyEigenMatrix)
+{
+	TensorflowWrapperInit;
+	ClientSession session(root);
+	Output Add = ops::Add(root.WithOpName("add"), input, input);
+
+	Eigen::Matrix2i mtrx = Eigen::Matrix2i::Random();
+	::std::cout << mtrx << ::std::endl;
+	Tensor myEigenTensor(DT_INT32, { mtrx.rows(),mtrx.cols() });
+	::std::copy_n(mtrx.data(), mtrx.size(), myEigenTensor.matrix<int>().data());
+	std::cout << myEigenTensor.DebugString();
+	Status st = session.Run({ { input,myEigenTensor } }, { Add }, &output);
+	int* data = output.at(0).matrix<int>().data();
+	for (Eigen::Index ctr = 0; ctr < mtrx.size(); ctr++)
+	{
+		EXPECT_EQ(2 * mtrx(ctr), *data);
+		data++;
+	}
+}
 TEST(Const, Float)
 {
 	Scope root = Scope::NewRootScope();
