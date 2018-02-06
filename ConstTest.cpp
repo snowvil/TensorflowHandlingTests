@@ -88,6 +88,40 @@ TEST(Const, MatrixConstruct)
 	EXPECT_EQ(*data++, 4);
 }
 
+TEST(Const, ConvertVectorToTensor)
+{
+	Scope root = Scope::NewRootScope();
+	ops::Placeholder input = ops::Placeholder(root.WithOpName("input"), DT_FLOAT);
+	::std::vector<Tensor> output;
+
+	ClientSession session(root);
+	Output Add = ops::Add(root.WithOpName("add"), input, input);
+	Status st({ session.Run({ { input,{ 1.2F } } },{ Add }, &output) });
+	EXPECT_EQ(2.4F, *(output.at(0).scalar<float>().data())) << st.error_message();
+
+	st = session.Run({ { input,{ 1.1F,1.0F } } },{ Add }, &output);
+	float* data = output.at(0).vec<float>().data();
+	ASSERT_TRUE(st.ok()) << st.error_message();
+	EXPECT_EQ(2.2F, *data++);
+	EXPECT_EQ(2.0F, *data);
+
+	st = session.Run({ {input,{{ 1.1F,1.0F },{2.0F,3.0F}}} }, { Add }, &output);
+	data = output.at(0).matrix<float>().data();
+	ASSERT_TRUE(st.ok()) << st.error_message();
+	EXPECT_EQ(2.2F, *data++);
+	EXPECT_EQ(2.0F, *data++);
+	EXPECT_EQ(4.0F, *data++);
+	EXPECT_EQ(6.0F, *data++);
+
+	Tensor myTensor(DT_FLOAT, { 1,1 });
+	myTensor.scalar<float>()(0) = 3.0F;
+	st = session.Run({ { input,myTensor} }, { Add }, &output);
+	ASSERT_TRUE(st.ok()) << st.error_message();
+
+	data = output.at(0).matrix<float>().data();
+	EXPECT_EQ(6.0F, *data);
+}
+
 TEST(Const, Float)
 {
 	Scope root = Scope::NewRootScope();
