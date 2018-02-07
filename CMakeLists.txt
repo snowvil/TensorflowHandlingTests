@@ -25,3 +25,6 @@ enhanceTarget(NNOps)
 add_executable(Training TrainingTest.cpp)
 enhanceTarget(Training)
 
+add_executable(ArrayOps ArrayOpsTest.cpp)
+enhanceTarget(ArrayOps)
+
