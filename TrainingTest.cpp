@@ -18,13 +18,12 @@ TEST(Training, ApplyGradientsDescent)
 	Output variable = ops::Variable(root, { 1 }, DT_FLOAT);
 	Output assign = ops::Assign(root, variable, { 1.0F });
 
-	ClientSession sess(root);
-	Status status({ sess.Run({assign},nullptr) });
+	Status status({ session.Run({assign},nullptr) });
 
 	// if the documentation is talking about scalar, it seems, that the function does not need 
 	// an initializer list for that value
 	Output applyGradDescent = ops::ApplyGradientDescent(root, variable, 0.1F, { 1.0F });
-	status = sess.Run({}, { applyGradDescent }, &output);
+	status = session.Run({}, { applyGradDescent }, &output);
 	EXPECT_TRUE(status.ok()) << status.error_message();
 	float* val = output.at(0).scalar<float>().data();
 	EXPECT_FLOAT_EQ(0.9, *val);

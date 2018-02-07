@@ -13,7 +13,6 @@ TEST(Const, Scalar)
 {
 	TensorflowWrapperInit;
 	Output Add = ops::Add(root.WithOpName("add"), input, { 0 });
-	ClientSession session(root);
 
 	session.Run({ { input,{ 1 } } }, { Add }, &output);
 	EXPECT_EQ(1, *(output.at(0).scalar<int>().data()));
@@ -22,7 +21,6 @@ TEST(Const, Scalar)
 TEST(Const, RichByPlaceholder)
 {
 	TensorflowWrapperInit;
-	ClientSession session(root);
 
 	Status st = session.Run({ { input,{ 1 } } }, { input }, &output);
 	ASSERT_TRUE(st.ok()) << st.error_message();
@@ -33,7 +31,6 @@ TEST(Const, Vector)
 {
 	TensorflowWrapperInit;
 	Output Add = ops::Add(root.WithOpName("add"), input, { 1,1 });
-	ClientSession session(root);
 
 	session.Run({ { input,{1,2} } }, { Add }, &output);
 	int* val = output.at(0).vec<int>().data();
@@ -134,7 +131,6 @@ TEST(Const, CreateTensor)
 TEST(Const, CopyVector)
 {
 	TensorflowWrapperInit;
-	ClientSession session(root);
 	Output Add = ops::Add(root.WithOpName("add"), input, input);
 
 	::std::vector<int> vec({ 1,2,3,4 });
@@ -153,7 +149,7 @@ TEST(Const, CopyVector)
 TEST(Const, CopyEigenMatrix)
 {
 	TensorflowWrapperInit;
-	ClientSession session(root);
+
 	Output Add = ops::Add(root.WithOpName("add"), input, input);
 
 	Eigen::Matrix2i mtrx = Eigen::Matrix2i::Random();

@@ -15,7 +15,6 @@ TEST(Math, AbsSingle)
 	TensorflowWrapperInit;
 	Output AbsValue = ops::Abs(root, input);
 
-	ClientSession session(root);
 	Status st{ session.Run({{input,{-1}}}, { AbsValue }, &output) };
 	EXPECT_EQ(1, *output.at(0).scalar<int>().data());
 	output.clear();
@@ -26,7 +25,6 @@ TEST(Math, AbsVector)
 	TensorflowWrapperInit;
 	Output AbsValue = ops::Abs(root, input);
 
-	ClientSession session(root);
 	Status st{ session.Run({ { input,{ -1,-2 } } },{ AbsValue }, &output) };
 	int* val = output.at(0).vec<int>().data();
 	EXPECT_EQ(1, *val);
@@ -34,12 +32,47 @@ TEST(Math, AbsVector)
 	output.clear();
 }
 
+TEST(Math, SumVec)
+{
+	TensorflowWrapperInit;
+
+	Output Sum = ops::Sum(root, input,0);
+
+	Status st{ session.Run({ { input,{ -1,-2 } } },{ Sum }, &output) };
+	ASSERT_TRUE(st.ok()) << st.error_message();
+	int* val = output.at(0).flat<int>().data();
+	EXPECT_EQ(*val, -3);
+}
+
+TEST(Math, SumMatrix)
+{
+	TensorflowWrapperInit;
+	//Eigen::Matrix2i mat;
+	//mat << 1, 2, 3, 4;
+	Tensor values(DT_INT32, { 2,2 });
+	for(int64 i = 0; i < values.NumElements(); i++)
+		values.flat<int>()(i) = i;
+
+	Output Sum0 = ops::Sum(root, input, 0);
+	Output Sum1 = ops::Sum(root, input, 1);
+
+	Status st{ session.Run({ { input,values}},{ Sum0,Sum1 }, &output) };
+	ASSERT_TRUE(st.ok()) << st.error_message();
+
+	int* val = output.at(0).flat<int>().data();
+	EXPECT_EQ(2, *val++);
+	EXPECT_EQ(4, *val++);
+
+	val = output.at(1).flat<int>().data();
+	EXPECT_EQ(1, *val++);
+	EXPECT_EQ(5, *val++);
+}
+
 TEST(NNOps, ReluSingle)
 {
 	TensorflowWrapperInit;
 	Output Relu = ops::Relu(root, input);
 
-	ClientSession session(root);
 	Status st{ session.Run({ { input,{ 0 } } },{ Relu }, &output) };
 	int* val = output.at(0).vec<int>().data();
 	EXPECT_EQ(0, *val);
@@ -66,7 +99,6 @@ TEST(NNOps, ReluVector)
 	TensorflowWrapperInit;
 	Output Relu = ops::Relu(root, input);
 
-	ClientSession session(root);
 	Status st{ session.Run({ { input,{ -1,0,1,10 } } },{ Relu }, &output) };
 	int* val = output.at(0).vec<int>().data();
 	EXPECT_EQ(0, *val);
@@ -81,7 +113,6 @@ TEST(Math, TanhSingle)
 	TensorflowWrapperInit;
 	Output Tanh = ops::Tanh(root, ops::Cast(root,input,DT_FLOAT));
 
-	ClientSession session(root);
 	Status st{ session.Run({ { input,{ 0 } } },{ Tanh }, &output) };
 	float* val = output.at(0).vec<float>().data();
 	EXPECT_EQ(0, *val);

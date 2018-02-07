@@ -16,7 +16,6 @@ TEST(Variable, Variable)
 	ops::Variable var = ops::Variable(root, { 1 }, DT_INT32);
 	Output varAssign = ops::Assign(root, var, { 1 });
 
-	ClientSession session(root);
 	Status st{ session.Run({ varAssign }, &output) };
 	EXPECT_EQ(1, *output.at(0).scalar<int>().data());
 	output.clear();
@@ -45,7 +44,6 @@ TEST(Variable, VariableIntAdd)
 	ops::Variable var = ops::Variable(root, { 1 }, DT_INT32);
 	Output varAssign = ops::Assign(root, var, { 1 });
 
-	ClientSession session(root);
 	Status st{ session.Run({ varAssign }, &output) };
 	EXPECT_EQ(1, *output.at(0).scalar<int>().data());
 	output.clear();
@@ -61,7 +59,6 @@ TEST(Variable, VariableFloatAdd)
 	ops::Variable var = ops::Variable(root, { 1 }, DT_FLOAT);
 	Output varAssign = ops::Assign(root, var, { 1.2F });
 
-	ClientSession session(root);
 	Status st{ session.Run({ varAssign }, &output) };
 	EXPECT_EQ(1.2F, *output.at(0).scalar<float>().data());
 	output.clear();
@@ -85,7 +82,6 @@ TEST(Variable, ManipulateVariable)
 	ops::Variable var = ops::Variable(root, { 1 }, DT_FLOAT);
 	Output varAssign = ops::Assign(root, var, { weight });
 
-	ClientSession session(root);
 	Status st{ session.Run({ varAssign }, &output) };
 	EXPECT_EQ(weight, *output.at(0).scalar<float>().data());
 	output.clear();
