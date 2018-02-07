@@ -4,13 +4,13 @@ project(BasicTest LANGUAGES CXX)
 find_package(tensorflow REQUIRED)
 find_package(GTest REQUIRED)
 
-macro(enhanceTarget targetname)
+function(enhanceTarget targetname)
     target_sources(${targetname} PRIVATE testhelper.h)
     target_link_libraries(${targetname} PRIVATE tensorflow ${GTEST_BOTH_LIBRARIES})
     target_include_directories(${targetname} PRIVATE ${GTEST_INCLUDE_DIRS})
     target_compile_definitions(${targetname} PRIVATE COMPILER_MSVC)
     add_test(NAME ${targetname} COMMAND ${targetname})
-endmacro()
+endfunction()
 
 
 add_executable(Const ConstTest.cpp)
