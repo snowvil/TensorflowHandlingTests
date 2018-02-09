@@ -35,8 +35,9 @@ TEST(ArrayOps, ExpandDims)
 	Status st = session.Run({ { input,{ 1,2 }} }, { ExpandDims }, &output);
 	ASSERT_TRUE(st.ok()) << st.error_message();
 
-	std::cout << output.at(0).DebugString() << std::endl;
-	std::cout << output.at(0).dims() << std::endl;
+	EXPECT_EQ(2, output.at(0).dims());
+	EXPECT_EQ(1, output.at(0).dim_size(0));
+	EXPECT_EQ(2, output.at(0).dim_size(1));
 }
 
 TEST(ArrayOps, ExpandDimsAndConcat)
@@ -57,5 +58,16 @@ TEST(ArrayOps, ExpandDimsAndConcat)
 	ASSERT_TRUE(st.ok()) << st.error_message();
 
 	std::cout << output.at(0).DebugString() << std::endl;
-	std::cout << output.at(1).DebugString();
+	int dimensions = output.at(0).dims();
+	EXPECT_EQ(1, dimensions);
+	EXPECT_EQ(4, output.at(0).dim_size(0));
+
+	dimensions = output.at(1).dims();
+	EXPECT_EQ(2, dimensions);
+	EXPECT_EQ(2, output.at(1).dim_size(0));
+	EXPECT_EQ(2, output.at(1).dim_size(1));
+	std::cout << output.at(1).DebugString() << std::endl;
+
+	/*TTypes<int>::Matrix mat =  output.at(1).matrix<int>();
+	::std::cout << mat << ::std::endl;*/
 }
