@@ -129,6 +129,27 @@ TEST(Math, TanhSingle)
 	output.clear();
 }
 
+TEST(Math, Sigmoid)
+{
+	TensorflowWrapperInit;
+	Output Sigmoid = ops::Sigmoid(root, ops::Cast(root, input, DT_FLOAT));
+
+	Status st{ session.Run({ { input,{ 0 } } },{ Sigmoid }, &output) };
+	float* val = output.at(0).vec<float>().data();
+	EXPECT_FLOAT_EQ(0.5, *val);
+	output.clear();
+
+	st = session.Run({ { input,{ 100 } } }, { Sigmoid }, &output);
+	val = output.at(0).vec<float>().data();
+	EXPECT_FLOAT_EQ(1, *val);
+	output.clear();
+
+	st = session.Run({ { input,{ -100 } } }, { Sigmoid }, &output);
+	val = output.at(0).vec<float>().data();
+	EXPECT_FLOAT_EQ(0, *val);
+	output.clear();
+}
+
 TEST(NNOps, L2LossScalar)
 {
 	//L2Loss = sum(t**2)/2
@@ -175,5 +196,6 @@ TEST(NNOps, L2LossVector)
 	Status status = session.Run({ { x,{ 1.0F,2.0F,3.0F } } }, { L2Loss }, &output);
 	ASSERT_TRUE(status.ok()) << status.error_message();
 	float* val = output.at(0).scalar<float>().data();
+	// (1^2 + 2^2 + 3^2) / 2 = 7
 	EXPECT_FLOAT_EQ(7, *val);
 }
