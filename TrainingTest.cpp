@@ -26,7 +26,7 @@ TEST(Training, ApplyGradientsDescent)
 	status = session.Run({}, { applyGradDescent }, &output);
 	EXPECT_TRUE(status.ok()) << status.error_message();
 	float* val = output.at(0).scalar<float>().data();
-	EXPECT_FLOAT_EQ(0.9, *val);
+	EXPECT_FLOAT_EQ(0.9F, *val);
 }
 
 
@@ -38,38 +38,66 @@ TEST(Training, ApplyGradientsDescent)
 #include "tensorflow/core/framework/types.h"
 #include "tensorflow/cc/framework/gradients.h"
 
-constexpr float RISE = 2.75;
-constexpr float OFFSET = -1.45;
+constexpr float RISE = 2.395F;
+constexpr float OFFSET = -4.786F;
 
-float generateValues(int value)
+float RandomFloat(float a, float b) 
 {
-	return (value * RISE + OFFSET);
+	float random = ((float)rand()) / (float)RAND_MAX;
+	float diff = b - a;
+	float r = random * diff;
+	return a + r;
 }
 
+float generateValues(int value, bool addRand)
+{
+	if (addRand)
+		return  ((value * RISE + OFFSET) + RandomFloat(1, -1));
+	else
+		return (value * RISE + OFFSET);
+}
+
+void DisplayInformation(const size_t &idx, std::vector<tensorflow::Tensor> &output, tensorflow::Tensor &tensorOutputY)
+{
+	std::cout << idx << "\t";
+	std::cout << "y: " << output.at(0).vec<float>()(0) << "\t";
+	std::cout << "y_des: " << tensorOutputY.vec<float>()(0) << "\t";
+	std::cout << "RMS: " << output.at(1).scalar<float>() << "\t";
+	std::cout << "apply_w: " << output.at(2).scalar<float>() << "\t";
+	std::cout << "apply_b: " << output.at(3).scalar<float>();
+	std::cout << std::endl;
+}
 
 TEST(Training, AddSymbolicGradients)
 {
 	constexpr int TRAININGSIZE	= 1000;
 	constexpr int TESTSIZE		= 50;
-
+	
+	bool randomness = true;
 	// create trainvector
 	::std::vector<int> trainX(TRAININGSIZE,0);
 	::std::iota(trainX.begin(), trainX.end(), 0);
 	::std::vector<float> trainY(TRAININGSIZE,0.0);
-	::std::transform(trainX.begin(), trainX.end(),trainY.begin(),generateValues);
+	::std::transform(trainX.begin(), trainX.end(), trainY.begin(),
+		[randomness](int &val) { return generateValues(val,randomness); });
 
 	// create testvector
 	::std::vector<int> testX(TESTSIZE, 0);
 	::std::for_each(testX.begin(), testX.end(), [](int& val){ val = (std::rand() % 1000); });
 	::std::vector<float> testY(TESTSIZE, 0.0);
-	::std::transform(testX.begin(), testX.end(), testY.begin(), generateValues);
+	::std::transform(testX.begin(), testX.end(), testY.begin(), 
+		[randomness](int &val) { return generateValues(val, !randomness); });
 
 	// convert the vectors into tensors
-	Tensor tensorTestX{ DT_INT32,TensorShape{TRAININGSIZE} };
-	Tensor tensorTestY{ DT_FLOAT,TensorShape{ TRAININGSIZE } };
+	Tensor tensorTrainX{ DT_INT32,TensorShape{TRAININGSIZE} };
+	Tensor tensorTrainY{ DT_FLOAT,TensorShape{ TRAININGSIZE } };
+	Tensor tensorTestX{ DT_INT32,TensorShape{ TESTSIZE } };
+	Tensor tensorTestY{ DT_FLOAT,TensorShape{ TESTSIZE } };
 
-	memcpy(tensorTestX.vec<int>().data(), trainX.data(), TRAININGSIZE * sizeof(int));
-	memcpy(tensorTestY.vec<float>().data(), trainY.data(), TRAININGSIZE * sizeof(float));
+	memcpy(tensorTrainX.vec<int>().data(), trainX.data(), TRAININGSIZE * sizeof(int));
+	memcpy(tensorTrainY.vec<float>().data(), trainY.data(), TRAININGSIZE * sizeof(float));
+	memcpy(tensorTestX.vec<int>().data(), testX.data(), TESTSIZE * sizeof(int));
+	memcpy(tensorTestY.vec<float>().data(), testY.data(), TESTSIZE * sizeof(float));
 
 	Scope root = Scope::NewRootScope();
 	ops::Placeholder inputHolder = ops::Placeholder(root.WithOpName("input"), DT_INT32);
@@ -89,12 +117,10 @@ TEST(Training, AddSymbolicGradients)
 	Output riser = ops::Mul(root.WithOpName("riser"),ops::Cast(root,inputHolder,DT_FLOAT), w);
 	Output y = ops::Add(root.WithOpName("bias"),riser,b);
 
-	//auto loosness = ops::L2Loss(root, w);
 	auto temp1 = ops::Sub(root, y, outputHolder);
 	auto temp2 = ops::Square(root, temp1);
-	auto RMS = ops::Mean(root, temp2, {0});
-	//auto temp4 = ops::Mul(root, ops::Cast(root, 0.01, DT_FLOAT), loosness);
-	//auto loss = ops::Add(root, RMS,temp4);
+	auto temp3 = ops::Mean(root, temp2, {0});
+	auto RMS = ops::Sqrt(root, temp3);
 
 	std::vector<Output> grad_outputs;
 	AddSymbolicGradients(root, { RMS }, { w,b}, &grad_outputs);
@@ -104,27 +130,34 @@ TEST(Training, AddSymbolicGradients)
 	auto apply_b = ops::ApplyGradientDescent(root, b, ops::Cast(root, 0.01, DT_FLOAT), { grad_outputs[1] });
 
 
-	ClientSession::FeedType inputs;
-	inputs.emplace(inputHolder, tensorTestX);
-	inputs.emplace(outputHolder, tensorTestY);
-	float RMSValue = 1;
+	ClientSession::FeedType trainInputs;
+	trainInputs.emplace(inputHolder, tensorTrainX);
+	trainInputs.emplace(outputHolder, tensorTrainY);
 	size_t idx = 0;
-	while(RMSValue > 1E-7 && idx < 100000)
+	while(idx <= 10000)
 	{
-		status = session.Run(inputs, { y,RMS,apply_w, apply_b, temp1 }, &output);
+		status = session.Run(trainInputs, { y,RMS,apply_w, apply_b }, &output);
 		ASSERT_TRUE(status.ok()) << status.error_message();
-		if (idx % 1000 == 0 || idx < 10)
+		if (idx % 1000 == 0 || idx <= 10)
 		{
-			std::cout << idx << "\t";
-			std::cout <<"y: " << output.at(0).vec<float>()(1) << "\t";
-			std::cout <<"y_des: " << tensorTestY.vec<float>()(1) << "\t";
-			std::cout << "RMS: " << output.at(1).scalar<float>() << "\t";
-			std::cout << "apply_w: " << output.at(2).scalar<float>() << "\t";
-			std::cout << "apply_b: " << output.at(3).scalar<float>();
-			std::cout << std::endl;
+			DisplayInformation(idx, output, tensorTrainY);
 		}
-		RMSValue = *output.at(1).scalar<float>().data();
 		idx++;
 	}
-	std::cout << "it took " << idx << " iterations" << std::endl;
+
+	EXPECT_NEAR(RISE, *output.at(2).scalar<float>().data(), 0.01);
+	EXPECT_NEAR(OFFSET, *output.at(3).scalar<float>().data(), 0.01);
+
+	// do the testing
+	ClientSession::FeedType testInputs;
+	testInputs.emplace(inputHolder, tensorTestX);
+	testInputs.emplace(outputHolder, tensorTestY);
+
+	status = session.Run(testInputs, {y}, &output);
+
+	constexpr float MAXDIFF = 0.05F;
+	for (size_t idx = 0; idx < TESTSIZE; idx++)
+	{
+		EXPECT_NEAR(output.at(0).vec<float>()(idx), tensorTestY.vec<float>()(idx), 0.05);
+	}
 }
