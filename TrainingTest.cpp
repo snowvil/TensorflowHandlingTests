@@ -72,6 +72,9 @@ TEST(Training, AddSymbolicGradients)
 {
 	constexpr int TRAININGSIZE	= 1000;
 	constexpr int TESTSIZE		= 50;
+
+	::std::cout << "RISE:\t" << RISE << ::std::endl;
+	::std::cout << "OFFSET:\t" << OFFSET << ::std::endl;
 	
 	bool randomness = true;
 	// create trainvector
@@ -117,8 +120,7 @@ TEST(Training, AddSymbolicGradients)
 	Output riser = ops::Mul(root.WithOpName("riser"),ops::Cast(root,inputHolder,DT_FLOAT), w);
 	Output y = ops::Add(root.WithOpName("bias"),riser,b);
 
-	auto temp1 = ops::Sub(root, y, outputHolder);
-	auto temp2 = ops::Square(root, temp1);
+	auto temp2 = ops::SquaredDifference(root, y, outputHolder);
 	auto temp3 = ops::Mean(root, temp2, {0});
 	auto RMS = ops::Sqrt(root, temp3);
 
