@@ -28,3 +28,14 @@ enhanceTarget(Training)
 add_executable(ArrayOps ArrayOpsTest.cpp)
 enhanceTarget(ArrayOps)
 
+# for the graph_def usage, you might need the libprotobuf.lib which can be found at:
+# <tensorflow-build-dir>/protobuf/src/protobuf/Release/libprotobuf.lib
+
+set(protobuf-lib_DIR "" CACHE FILEPATH "Filepath to libprotobuf.lib. HINT: <tensorflow-build-dir>/protobuf/src/protobuf/Release/")
+add_library(protobuf STATIC IMPORTED)
+set_target_properties(protobuf PROPERTIES IMPORTED_LOCATION ${protobuf-lib_DIR})
+
+add_executable(SaveAndRestore SaveAndRestoreTest.cpp)
+target_link_libraries(SaveAndRestore PRIVATE protobuf)
+enhanceTarget(SaveAndRestore)
+
