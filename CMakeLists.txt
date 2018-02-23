@@ -9,7 +9,8 @@ function(enhanceTarget targetname)
     target_link_libraries(${targetname} PRIVATE tensorflow ${GTEST_BOTH_LIBRARIES})
     target_include_directories(${targetname} PRIVATE ${GTEST_INCLUDE_DIRS})
     target_compile_definitions(${targetname} PRIVATE COMPILER_MSVC)
-    add_test(NAME ${targetname} COMMAND ${targetname})
+    gtest_add_tests(TARGET ${targetname} 
+		EXTRA_ARGS --gtest_output=xml:${targetname}Test)
 endfunction()
 
 
