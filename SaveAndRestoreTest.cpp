@@ -22,6 +22,7 @@ protected:
 	{
 		::std::vector<Tensor> output;
 		Output varAssign = ops::Assign(root.WithOpName("variableAssign"), var, { 1 });
+		Output Multiplay = ops::Mul(root.WithOpName("multiply"), var, input);
 
 		Status st{ session.Run({ varAssign }, &output) };
 		ASSERT_TRUE(st.ok()) << st.error_message();
@@ -34,13 +35,60 @@ protected:
 	}
 };
 
-TEST_F(SaveAndRestore, Variable)
+TEST_F(SaveAndRestore, WriteTextProto)
 {	
 	GraphDef graphDef;
 	root.ToGraphDef(&graphDef);
 
-	Status st = WriteTextProto(Env::Default(), "SaveAndRestore-Variable.pbtext", graphDef);
+	Status st = WriteTextProto(Env::Default(), "./SaveAndRestore-Variable.pbtext", graphDef);
 	ASSERT_TRUE(st.ok()) << st.error_message();
+}
+
+TEST_F(SaveAndRestore, WriteBinaryProto)
+{
+	GraphDef graphDef;
+	root.ToGraphDef(&graphDef);
+
+	Status st = WriteBinaryProto(Env::Default(), "./SaveAndRestore-Variable.pb", graphDef);
+	ASSERT_TRUE(st.ok()) << st.error_message();
+}
+
+#include <experimental/filesystem>
+#include "tensorflow/core/public/session.h"
+
+TEST(Reading, ReadBinaryProto)
+{
+	std::string filename{ "./SaveAndRestore-Variable.pb" };
+	ASSERT_TRUE(std::experimental::filesystem::exists(filename));
+
+	GraphDef graphDef;	
+	Status st = ReadBinaryProto(Env::Default(), filename, &graphDef);
+	ASSERT_TRUE(st.ok()) << st.error_message();
+
+	tensorflow::SessionOptions options;
+	std::unique_ptr<tensorflow::Session>
+	session(tensorflow::NewSession(options));
+	tensorflow::Status s = session->Create(graphDef);
+
+	// some typedefs for better handling
+	typedef std::pair<string, Tensor> INPUT;
+	std::vector<INPUT> oVec;
+
+	Tensor inputVal{ DT_INT32,TensorShape({1}) };
+	inputVal.scalar<int>()() = 2;
+	INPUT oInputPlaceholder{ "input", inputVal };
+	oVec.push_back(oInputPlaceholder);
+
+	// have to manually call the variable assignation
+	st = session->Run({}, { "variableAssign" }, {}, nullptr);
+	ASSERT_TRUE(st.ok()) << st.error_message();
+
+	// call the graph
+	::std::vector<Tensor> output;
+	st = session->Run(oVec, { "multiply" }, {}, &output);
+	ASSERT_TRUE(st.ok()) << st.error_message();
+	EXPECT_EQ(output.at(0).scalar<int>()(), 2);
+	session->Close();
 }
 
 TEST_F(SaveAndRestore, DisplayNodes)
@@ -52,7 +100,7 @@ TEST_F(SaveAndRestore, DisplayNodes)
 
 	for (int idx = 0; idx < graphDef.node_size(); idx++)
 	{
-		std::cout << NODE(idx).name() << "/t" << NODE(idx).op() << std::endl;
+		std::cout << NODE(idx).name() << "\t" << NODE(idx).op() << std::endl;
 	}
 }
 
@@ -67,6 +115,7 @@ TEST_F(SaveAndRestore, SaveV2)
 	string filename = "./ckpt";
 	string names = "variable";
 	string shapes = "";
+
 	Tensor prefix(DT_STRING, TensorShape({}));
 	prefix.scalar<string>()() = filename;
 	Tensor shapeAndSlices(DT_STRING, TensorShape({1}));
@@ -74,10 +123,29 @@ TEST_F(SaveAndRestore, SaveV2)
 	Tensor tensor_names(DT_STRING, TensorShape({1}));
 	tensor_names.scalar<string>()() = names;
 
-	//Operation Saver = ops::SaveV2(root, filename, names, shapes, oLst);
 	Operation Saver = ops::SaveV2(root, prefix, tensor_names, shapeAndSlices, oLst);
 
 	std::vector<Operation> out{ Saver };
-	Status st{ session.Run({ { input,{3} }},{},out,nullptr) };
+	Status st = session.Run({},{},out,nullptr);
 	ASSERT_TRUE(st.ok()) << st.error_message();
+}
+
+TEST(Restore, RestoreV2)
+{
+	Scope root{ Scope::NewRootScope() };
+
+	string filename = "./ckpt";
+	string names = "variable";
+	string shapes = "";
+
+	Tensor prefix(DT_STRING, TensorShape({}));
+	prefix.scalar<string>()() = filename;
+	Tensor shapeAndSlices(DT_STRING, TensorShape({ 1 }));
+	shapeAndSlices.scalar<string>()() = shapes;
+	Tensor tensor_names(DT_STRING, TensorShape({ 1 }));
+	tensor_names.scalar<string>()() = names;
+
+	DataTypeSlice dType{ DT_INT32 };
+
+	ops::RestoreV2 Restore = ops::RestoreV2(root, { prefix }, { shapeAndSlices }, { shapeAndSlices }, dType);
 }
