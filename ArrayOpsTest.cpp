@@ -36,8 +36,8 @@ TEST(ArrayOps, ExpandDims)
 	ASSERT_TRUE(st.ok()) << st.error_message();
 
 	EXPECT_EQ(2, output.at(0).dims());
-	EXPECT_EQ(1, output.at(0).dim_size(0));
-	EXPECT_EQ(2, output.at(0).dim_size(1));
+	EXPECT_EQ(2, output.at(0).dim_size(0));
+	EXPECT_EQ(1, output.at(0).dim_size(1));
 }
 
 TEST(ArrayOps, ExpandDimsAndConcat)
