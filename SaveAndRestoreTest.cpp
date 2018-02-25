@@ -10,6 +10,8 @@
 
 using namespace tensorflow;
 
+#define ASSIGNVALUE 1
+
 class SaveAndRestore : public ::testing::Test
 {
 protected:
@@ -21,12 +23,12 @@ protected:
 	void SetUp() override
 	{
 		::std::vector<Tensor> output;
-		Output varAssign = ops::Assign(root.WithOpName("variableAssign"), var, { 1 });
+		Output varAssign = ops::Assign(root.WithOpName("variableAssign"), var, { ASSIGNVALUE });
 		Output Multiplay = ops::Mul(root.WithOpName("multiply"), var, input);
 
 		Status st{ session.Run({ varAssign }, &output) };
 		ASSERT_TRUE(st.ok()) << st.error_message();
-		ASSERT_EQ(1, *output.at(0).scalar<int>().data());
+		EXPECT_EQ(1, *output.at(0).scalar<int>().data());
 		output.clear();
 	}
 
@@ -132,6 +134,7 @@ TEST_F(SaveAndRestore, SaveV2)
 
 TEST(Restore, RestoreV2)
 {
+	// needs a scope. Why??
 	Scope root{ Scope::NewRootScope() };
 
 	string filename = "./ckpt";
@@ -145,7 +148,18 @@ TEST(Restore, RestoreV2)
 	Tensor tensor_names(DT_STRING, TensorShape({ 1 }));
 	tensor_names.scalar<string>()() = names;
 
-	DataTypeSlice dType{ DT_INT32 };
+	ops::RestoreV2 Restore = ops::RestoreV2(root, prefix, tensor_names, shapeAndSlices, { DT_INT32 });
+	std::cout << Restore.tensors.at(0).name() << "\t" <<  Restore.tensors.at(0).type() << std::endl;
 
-	ops::RestoreV2 Restore = ops::RestoreV2(root, { prefix }, { shapeAndSlices }, { shapeAndSlices }, dType);
+	// How to convert from root to Session?
+	ClientSession sess = root;
+	::std::vector<Tensor> output;
+	Status st  = sess.Run({ Restore.tensors.at(0) }, &output);
+	ASSERT_TRUE(st.ok()) << st.error_message();
+	EXPECT_EQ(ASSIGNVALUE, output.at(0).scalar<int>()());
+}
+
+TEST(Restore, Complete)
+{
+	// Loading the pb-model + assigning the variable values with the ckpt-Values
 }
