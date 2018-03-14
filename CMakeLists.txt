@@ -9,7 +9,7 @@ function(enhanceTarget targetname)
     target_link_libraries(${targetname} PRIVATE tensorflow ${GTEST_BOTH_LIBRARIES})
     target_include_directories(${targetname} PRIVATE ${GTEST_INCLUDE_DIRS})
     target_compile_definitions(${targetname} PRIVATE COMPILER_MSVC)
-    gtest_add_tests(TARGET ${targetname} 
+    gtest_add_tests(TARGET ${targetname}
 		EXTRA_ARGS --gtest_output=xml:${targetname}Test)
 endfunction()
 
@@ -39,4 +39,3 @@ set_target_properties(protobuf PROPERTIES IMPORTED_LOCATION ${protobuf-lib_DIR})
 add_executable(SaveAndRestore SaveAndRestoreTest.cpp)
 target_link_libraries(SaveAndRestore PRIVATE protobuf)
 enhanceTarget(SaveAndRestore)
-

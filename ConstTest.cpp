@@ -165,6 +165,35 @@ TEST(Const, CopyEigenMatrix)
 		data++;
 	}
 }
+
+TEST(Const, Ones)
+{
+	constexpr int nSize = 4;
+	Scope root{ Scope::NewRootScope() };
+
+	Eigen::MatrixXi ones = Eigen::MatrixXi::Ones(nSize, nSize);
+	::std::cout << ones << ::std::endl;
+	Tensor onesTensor{ DT_INT32,{ones.rows(),ones.cols()} };
+	std::copy_n(ones.data(), ones.size(), onesTensor.matrix<int>().data());
+
+	Output Ones = ops::Const(root, onesTensor);
+
+	ClientSession sess = root;
+	std::vector<Tensor> output;
+	Status st = sess.Run({ Ones }, &output);
+	CHECK_STATUS(st);
+
+	EXPECT_EQ(output.size(), 1);
+	EXPECT_EQ(output.at(0).dim_size(0), output.at(0).dim_size(1));
+	EXPECT_EQ(output.at(0).dim_size(0), nSize);
+	auto data = output.at(0).matrix<int>().data();
+	for (Eigen::Index ctr = 0; ctr < ones.size(); ctr++)
+	{
+		EXPECT_EQ(*data,1);
+		data++;
+	}
+}
+
 TEST(Const, Float)
 {
 	Scope root = Scope::NewRootScope();
